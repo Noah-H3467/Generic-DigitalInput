@@ -8,6 +8,7 @@ import java.util.Optional;
 
 import frc.robot.genericSubsystems.GenericDigitalInput.DigitalInputIOWPILib;
 import frc.robot.genericSubsystems.GenericDigitalInput.DigitalInputIOWPILib.DigitalInputIOConfiguration;
+import frc.robot.subsystems.ExampleBeamBreak;
 import frc.robot.genericSubsystems.GenericDigitalInput.DigitalInput;
 import frc.robot.util.WindupXboxController;
 
@@ -18,15 +19,25 @@ import frc.robot.util.WindupXboxController;
 public class RobotContainer {
 
     /**
-    * Beambreak constants
+     * There are two possible ways to implement the beambreak (or limit switch)
+     * Option 1: instantiate it inside the RobotContainer, and get its value to use in commands
+     * Option 2: instantiate it inside a subsystem, and use the subsystem to get its value.
+     * With option 2, its value will be logged periodically as well as reported to the dashboard.
+     */
+
+    /**
+    * Option 1: Beambreak constants
     */
     private static final DigitalInputIOWPILib.DigitalInputIOConfiguration m_beamBreakConstants = 
         new DigitalInputIOConfiguration(
             Optional.of("Beam_Break"),
-            0);
+            Ports.BEAM_BREAK_PORT);
         
-    // Initialize beambreak
+    // Option 1: Initialize beambreak
     DigitalInput m_beamBreak = new DigitalInput(new DigitalInputIOWPILib(m_beamBreakConstants));
+
+    // Option 2: Initialize example beambreak subsystem
+    ExampleBeamBreak  m_beamBreakSub = new ExampleBeamBreak("Example_Beam_Break", Ports.BEAM_BREAK_SUB_PORT);
 
     private final WindupXboxController joystick = new WindupXboxController(0);
 
@@ -39,9 +50,13 @@ public class RobotContainer {
 
     private void configureBindings() {
 
-        // Rumble when left trigger is pressed until the beam break is triggered
-        joystick.leftTrigger().whileTrue(
-            joystick.rumbleUntilCondition(0.5, () -> m_beamBreak.get()));
+        // Option 1: Rumble when left trigger is pressed until the beam break is triggered
+        joystick.leftTrigger().and(joystick.rightTrigger().negate()).whileTrue(
+            joystick.rumbleUntilCondition(0.5, () -> !m_beamBreak.get()));
+
+        // Option 2: Rumble when right trigger is pressed until the beam break is triggered
+        joystick.rightTrigger().and(joystick.leftTrigger().negate()).whileTrue(
+            joystick.rumbleUntilCondition(0.5, () -> m_beamBreakSub.isTriggered()));
     }
     
 }
