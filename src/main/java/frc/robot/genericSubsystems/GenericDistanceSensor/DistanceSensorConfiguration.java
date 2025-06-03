@@ -1,7 +1,8 @@
 package frc.robot.genericSubsystems.GenericDistanceSensor;
 
-import frc.robot.genericSubsystems.GenericDistanceSensor.DistanceSensorIO.ControlType;
-import frc.robot.genericSubsystems.GenericDistanceSensor.DistanceSensorIO.DistanceSensorIntrinsics;
+import com.ctre.phoenix6.configs.FovParamsConfigs;
+import com.ctre.phoenix6.configs.ProximityParamsConfigs;
+
 import frc.robot.util.drivers.CanDeviceId;
 
 public interface DistanceSensorConfiguration {
@@ -9,7 +10,7 @@ public interface DistanceSensorConfiguration {
 
     public CanDeviceId id();
 
-    public DistanceSensorIntrinsics intrinsics();
+    public ProximityParamsConfigs proximityConfigs();
 
-    public ControlType closedLoopControlType();
+    public FovParamsConfigs fovConfigs();
 }

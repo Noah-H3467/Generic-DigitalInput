@@ -10,22 +10,10 @@ import static edu.wpi.first.units.Units.VoltsPerRadianPerSecond;
 import java.util.Optional;
 import com.ctre.phoenix6.BaseStatusSignal;
 import com.ctre.phoenix6.StatusSignal;
-import com.ctre.phoenix6.configs.CANcoderConfiguration;
 import com.ctre.phoenix6.configs.MagnetSensorConfigs;
+import com.ctre.phoenix6.configs.ProximityParamsConfigs;
 import com.ctre.phoenix6.configs.CANrangeConfiguration;
-import com.ctre.phoenix6.controls.CoastOut;
-import com.ctre.phoenix6.controls.MotionMagicTorqueCurrentFOC;
-import com.ctre.phoenix6.controls.MotionMagicVelocityTorqueCurrentFOC;
-import com.ctre.phoenix6.controls.MotionMagicVelocityVoltage;
-import com.ctre.phoenix6.controls.MotionMagicVoltage;
-import com.ctre.phoenix6.controls.PositionTorqueCurrentFOC;
-import com.ctre.phoenix6.controls.PositionVoltage;
-import com.ctre.phoenix6.controls.StaticBrake;
-import com.ctre.phoenix6.controls.TorqueCurrentFOC;
-import com.ctre.phoenix6.controls.VelocityTorqueCurrentFOC;
-import com.ctre.phoenix6.controls.VelocityVoltage;
-import com.ctre.phoenix6.controls.VoltageOut;
-import com.ctre.phoenix6.hardware.CANcoder;
+import com.ctre.phoenix6.configs.FovParamsConfigs;
 import com.ctre.phoenix6.hardware.CANrange;
 import com.ctre.phoenix6.signals.FeedbackSensorSourceValue;
 import edu.wpi.first.units.AngularAccelerationUnit;
@@ -55,79 +43,30 @@ import lombok.experimental.var;
  * including position, velocity, current, and motion profile control.
  */
 public class DistanceSensorIOCANrange implements DistanceSensorIO {
-    public record DistanceSensorIOCANrangeConfiguration(String name, CanDeviceId id,
-        CANrange canRange,
-        MagnetSensorConfigs magnetConfigs,
-        FeedbackSensorSourceValue integrationType) {
-        public DistanceSensorIOCANrangeConfiguration(Optional<String> name, CanDeviceId id,
-            MagnetSensorConfigs magnetConfigs,
-            FeedbackSensorSourceValue integrationType)
-
-    }
 
     public record DistanceSensorIOCANrangeConfiguration(
-        String name,
+        String name, 
         CanDeviceId id,
-        CANrange DistanceSensor,
-        DistanceSensorIntrinsics intrinsics,
-        Optional<DistanceSensorIOCANCoderConfiguration> canCoder,
-        ControlType closedLoopControlType,
-        double sensorToMechanismRatio,
-        double rotorToSensorRatio,
-        PID positionPID,
-        PID velocityPID,
-        AngularVelocity cruiseVelocity,
-        AngularAcceleration accelerationConstraint,
-        Velocity<AngularAccelerationUnit> jerkConstraint)
-        implements DistanceSensorConfiguration {
-
-        private static Per<VoltageUnit, AngularVelocityUnit> getBackEMFConstantFromKV(
-            Per<AngularVelocityUnit, VoltageUnit> kV)
-        {
-            // .reciprocal() can't be certain of the unit type, so we have to do it explicitly
-            return VoltsPerRadianPerSecond.ofNativeBaseUnits(1 / kV.in(RadiansPerSecond.per(Volt)));
-        }
+        CANrange CANRange,
+        FovParamsConfigs fovConfigs,
+        ProximityParamsConfigs proximityConfigs) {
 
         public DistanceSensorIOCANrangeConfiguration(
-            Optional<String> name,
+            Optional<String> name, 
             CanDeviceId id,
-            CANrange DistanceSensor,
-            Resistance armatureResistance,
-            Optional<DistanceSensorIOCANCoderConfiguration> canCoder,
-            ControlType closedLoopControlType
-        }
+            FovParamsConfigs fovConfigs,
+            ProximityParamsConfigs proximityConfigs) 
         {
             this(
-                name.isEmpty() ? "id " + id.getDeviceNumber() : name.get(),
-                id,
-                DistanceSensor,
-                new DistanceSensorIntrinsics(
-                    armatureResistance,
-                    DistanceSensor.getDistanceSensorStallCurrent().getValue(),
-                    getBackEMFConstantFromKV(DistanceSensor.getDistanceSensorKV().getValue()),
-                    DistanceSensor.getDistanceSensorKT().getValue()),
-                CANrange,
-                closedLoopControlType,
-                sensorToMechanismRatio,
-                rotorToSensorRatio,
-                jerkConstraint);
-        }
-
-        public DistanceSensorIOCANrangeConfiguration(
-            Optional<String> name,
-            CanDeviceId id,
-            Resistance armatureResistance,
-            Optional<DistanceSensorIOCANCoderConfiguration> canCoder,
-        {
-            this(name,
-                id,
-                new CANrange(id.getDeviceNumber(), id.getBus()),
-                armatureResistance,
-                CANrange,
-                closedLoopControlType);
+                name.orElse("id " + id.getDeviceNumber()), 
+                id, 
+                new CANrange(id.getDeviceNumber(), id.getBus()), 
+                fovConfigs, 
+                proximityConfigs);
         }
 
     }
+
 
     @Getter
     private final String name;
@@ -135,10 +74,7 @@ public class DistanceSensorIOCANrange implements DistanceSensorIO {
     @Getter
     private final DistanceSensorIOCANrangeConfiguration configuration;
 
-    private final CANrange DistanceSensor;
-
-    @Getter
-    private final DistanceSensorIntrinsics DistanceSensorIntrinsics;
+    private final CANrange distanceSensor;
 
     private final StatusSignal<Boolean> isProLicensed;
     private final StatusSignal<Distance> distance;
@@ -163,19 +99,19 @@ public class DistanceSensorIOCANrange implements DistanceSensorIO {
     {
         configuration = config;
 
-        DistanceSensor = config.DistanceSensor();
+        distanceSensor = config.CANRange();
         CANrangeConfiguration configuration = new CANrangeConfiguration();
 
-        isProLicensed = DistanceSensor.getIsProLicensed();
-        distance = DistanceSensor.getDistance();
-        distanceStdDev = DistanceSensor.getDistanceStdDev();
-        supplyVoltage = DistanceSensor.getSupplyVoltage();
-        ambientSignal = DistanceSensor.getAmbientSignal();
-        fovCenterX = DistanceSensor.getRealFOVCenterX();
-        fovCenterY = DistanceSensor.getRealFOVCenterY();
-        fovRangeX = DistanceSensor.getRealFOVRangeX();
-        fovRangeY = DistanceSensor.getRealFOVRangeY();
-        isDetected = DistanceSensor.getIsDetected();
+        isProLicensed = distanceSensor.getIsProLicensed();
+        distance = distanceSensor.getDistance();
+        distanceStdDev = distanceSensor.getDistanceStdDev();
+        supplyVoltage = distanceSensor.getSupplyVoltage();
+        ambientSignal = distanceSensor.getAmbientSignal();
+        fovCenterX = distanceSensor.getRealFOVCenterX();
+        fovCenterY = distanceSensor.getRealFOVCenterY();
+        fovRangeX = distanceSensor.getRealFOVRangeX();
+        fovRangeY = distanceSensor.getRealFOVRangeY();
+        isDetected = distanceSensor.getIsDetected();
 
         // Set update frequencies for the StatusSignals of interest
         Phoenix6Util.checkErrorAndRetry(
@@ -190,23 +126,9 @@ public class DistanceSensorIOCANrange implements DistanceSensorIO {
                 fovRangeX,
                 fovRangeY));
 
-        DistanceSensor.optimizeBusUtilization(0, 1.0);
-
-        DistanceSensorIntrinsics = config.intrinsics();
+        distanceSensor.optimizeBusUtilization(0, 1.0);
 
         name = config.name();
-
-
-
-        var closedLoopControlType = config.closedLoopControlType();
-        if (!isProLicensed.getValue() && !RobotBase.isSimulation()) {
-            if (config.closedLoopControlType() == ControlType.CURRENT) {
-                //currentControlOnUnlicensedDistanceSensor.set(true);
-                closedLoopControlType = ControlType.VOLTAGE;
-            }
-
-        }
-        this.closedLoopControlType = closedLoopControlType;
 
     }
 
@@ -263,7 +185,7 @@ public class DistanceSensorIOCANrange implements DistanceSensorIO {
         config.ProximityParams.ProximityThreshold = newProximityThreshold;
         config.ProximityParams.ProximityHysteresis = newProximityHysteresis;
         config.ProximityParams.MinSignalStrengthForValidMeasurement = newMinSignalStrengthForValidMeasurement;
-        DistanceSensor.getConfigurator().apply(config);
+        distanceSensor.getConfigurator().apply(config);
     }
 
     /**
@@ -283,7 +205,7 @@ public class DistanceSensorIOCANrange implements DistanceSensorIO {
         config.FovParams.FOVCenterY = newFOVCenterY;
         config.FovParams.FOVRangeX = newFOVRangeX;
         config.FovParams.FOVRangeY = newFOVRangeY;
-        DistanceSensor.getConfigurator().apply(config);
+        distanceSensor.getConfigurator().apply(config);
     }
 
 }
