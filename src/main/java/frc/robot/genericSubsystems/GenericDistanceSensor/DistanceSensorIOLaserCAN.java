@@ -1,176 +1,60 @@
 package frc.robot.genericSubsystems.GenericDistanceSensor;
 
-import static edu.wpi.first.units.Units.RadiansPerSecond;
-import static edu.wpi.first.units.Units.Rotations;
-import static edu.wpi.first.units.Units.RotationsPerSecond;
-import static edu.wpi.first.units.Units.RotationsPerSecondPerSecond;
-import static edu.wpi.first.units.Units.Second;
-import static edu.wpi.first.units.Units.Volt;
-import static edu.wpi.first.units.Units.VoltsPerRadianPerSecond;
-import java.util.Optional;
+import org.littletonrobotics.junction.Logger;
+
 import com.ctre.phoenix6.BaseStatusSignal;
-import com.ctre.phoenix6.StatusSignal;
-import com.ctre.phoenix6.configs.LaserCANConfiguration;
-import com.ctre.phoenix6.configs.MagnetSensorConfigs;
-import com.ctre.phoenix6.configs.LaserCANConfiguration;
-import com.ctre.phoenix6.controls.CoastOut;
-import com.ctre.phoenix6.controls.MotionMagicTorqueCurrentFOC;
-import com.ctre.phoenix6.controls.MotionMagicVelocityTorqueCurrentFOC;
-import com.ctre.phoenix6.controls.MotionMagicVelocityVoltage;
-import com.ctre.phoenix6.controls.MotionMagicVoltage;
-import com.ctre.phoenix6.controls.PositionTorqueCurrentFOC;
-import com.ctre.phoenix6.controls.PositionVoltage;
-import com.ctre.phoenix6.controls.StaticBrake;
-import com.ctre.phoenix6.controls.TorqueCurrentFOC;
-import com.ctre.phoenix6.controls.VelocityTorqueCurrentFOC;
-import com.ctre.phoenix6.controls.VelocityVoltage;
-import com.ctre.phoenix6.controls.VoltageOut;
-import com.ctre.phoenix6.hardware.LaserCAN;
-import com.ctre.phoenix6.signals.FeedbackSensorSourceValue;
-import edu.wpi.first.units.AngularAccelerationUnit;
-import edu.wpi.first.units.AngularVelocityUnit;
-import edu.wpi.first.units.VoltageUnit;
-import edu.wpi.first.units.measure.Angle;
-import edu.wpi.first.units.measure.AngularAcceleration;
-import edu.wpi.first.units.measure.AngularVelocity;
+import com.ctre.phoenix6.configs.CANrangeConfiguration;
+import com.ctre.phoenix6.configs.FovParamsConfigs;
+import com.ctre.phoenix6.configs.ProximityParamsConfigs;
+
+import au.grapplerobotics.ConfigurationFailedException;
+import au.grapplerobotics.LaserCan;
+import au.grapplerobotics.interfaces.LaserCanInterface;
+import au.grapplerobotics.interfaces.LaserCanInterface.Measurement;
+import au.grapplerobotics.interfaces.LaserCanInterface.RangingMode;
+import au.grapplerobotics.interfaces.LaserCanInterface.RegionOfInterest;
+import au.grapplerobotics.interfaces.LaserCanInterface.TimingBudget;
+
+import java.util.Optional;
+
 import edu.wpi.first.units.measure.Current;
-import edu.wpi.first.units.measure.Per;
-import edu.wpi.first.units.measure.Resistance;
+import edu.wpi.first.units.measure.Distance;
 import edu.wpi.first.units.measure.Temperature;
-import edu.wpi.first.units.measure.Velocity;
-import edu.wpi.first.units.measure.Voltage;
 import edu.wpi.first.wpilibj.Alert;
 import edu.wpi.first.wpilibj.RobotBase;
 import edu.wpi.first.wpilibj.Alert.AlertType;
+import static edu.wpi.first.units.Units.*;
+
+import frc.robot.genericSubsystems.GenericDistanceSensor.DistanceSensorIOCANrange.DistanceSensorIOCANrangeConfiguration;
+import frc.robot.genericSubsystems.GenericDistanceSensor.DistanceSensorIOLaserCAN.DistanceSensorIOLaserCANConfiguration;
 import frc.robot.util.drivers.CanDeviceId;
-import frc.robot.util.drivers.Phoenix6Util;
 import lombok.Getter;
 
 /**
  * The DistanceSensorIOLaserCAN class represents a DistanceSensor interface for the LaserCAN DistanceSensor controller. It
- * integrates with Thrifty's hardware and provides methods for controlling the DistanceSensor,
- * including position, velocity, current, and motion profile control.
+ * integrates with Thrifty's hardware and provides methods for controlling the DistanceSensor.
  */
 public class DistanceSensorIOLaserCAN implements DistanceSensorIO {
-    public record DistanceSensorIOLaserCANConfiguration(String name, CanDeviceId id,
-        LaserCAN LaserCAN,
-        MagnetSensorConfigs magnetConfigs,
-        FeedbackSensorSourceValue integrationType) {
-        public DistanceSensorIOLaserCANConfiguration(Optional<String> name, CanDeviceId id,
-            MagnetSensorConfigs magnetConfigs,
-            FeedbackSensorSourceValue integrationType)
-        {
-            this(name.orElse("id " + id.getDeviceNumber()), id,
-                new LaserCAN(id.getDeviceNumber(), id.getBus()), magnetConfigs,
-                integrationType);
-        }
-    }
-
     public record DistanceSensorIOLaserCANConfiguration(
-        String name,
+        String name, 
         CanDeviceId id,
-        LaserCAN DistanceSensor,
-        DistanceSensorIntrinsics intrinsics,
-        Optional<DistanceSensorIOLaserCANConfiguration> LaserCAN,
-        ControlType closedLoopControlType,
-        double sensorToMechanismRatio,
-        double rotorToSensorRatio,
-        PID positionPID,
-        PID velocityPID,
-        AngularVelocity cruiseVelocity,
-        AngularAcceleration accelerationConstraint,
-        Velocity<AngularAccelerationUnit> jerkConstraint)
-        implements DistanceSensorConfiguration {
-
-        private static Per<VoltageUnit, AngularVelocityUnit> getBackEMFConstantFromKV(
-            Per<AngularVelocityUnit, VoltageUnit> kV)
-        {
-            // .reciprocal() can't be certain of the unit type, so we have to do it explicitly
-            return VoltsPerRadianPerSecond.ofNativeBaseUnits(1 / kV.in(RadiansPerSecond.per(Volt)));
-        }
+        RegionOfInterest fovConfigs,
+        RangingMode rangingMode,
+        TimingBudget timingBudget) {
 
         public DistanceSensorIOLaserCANConfiguration(
-            Optional<String> name,
+            Optional<String> name, 
             CanDeviceId id,
-            LaserCAN DistanceSensor,
-            Resistance armatureResistance,
-            Optional<DistanceSensorIOLaserCANConfiguration> LaserCAN,
-            ControlType closedLoopControlType,
-            double sensorToMechanismRatio,
-            double rotorToSensorRatio,
-            PID positionPID,
-            PID velocityPID,
-            AngularVelocity cruiseVelocity,
-            AngularAcceleration accelerationConstraint,
-            Velocity<AngularAccelerationUnit> jerkConstraint)
+            RegionOfInterest fovConfigs,
+            RangingMode rangingMode,
+            TimingBudget timingBudget) 
         {
             this(
-                name.isEmpty() ? "id " + id.getDeviceNumber() : name.get(),
-                id,
-                DistanceSensor,
-                new DistanceSensorIntrinsics(
-                    armatureResistance,
-                    DistanceSensor.getDistanceSensorStallCurrent().getValue(),
-                    getBackEMFConstantFromKV(DistanceSensor.getDistanceSensorKV().getValue()),
-                    DistanceSensor.getDistanceSensorKT().getValue()),
-                LaserCAN,
-                closedLoopControlType,
-                sensorToMechanismRatio,
-                rotorToSensorRatio,
-                positionPID, velocityPID,
-                cruiseVelocity,
-                accelerationConstraint,
-                jerkConstraint);
-        }
-
-        public DistanceSensorIOLaserCANConfiguration(
-            Optional<String> name,
-            CanDeviceId id,
-            Resistance armatureResistance,
-            Optional<DistanceSensorIOLaserCANConfiguration> LaserCAN,
-            ControlType closedLoopControlType,
-            double sensorToMechanismRatio,
-            double rotorToSensorRatio,
-            PID positionPID,
-            PID velocityPID,
-            AngularVelocity cruiseVelocity,
-            AngularAcceleration accelerationConstraint,
-            Velocity<AngularAccelerationUnit> jerkConstraint)
-        {
-            this(name,
-                id,
-                new LaserCAN(id.getDeviceNumber(), id.getBus()),
-                armatureResistance,
-                LaserCAN,
-                closedLoopControlType,
-                sensorToMechanismRatio,
-                rotorToSensorRatio,
-                positionPID,
-                velocityPID,
-                cruiseVelocity,
-                accelerationConstraint,
-                jerkConstraint);
-        }
-
-        public DistanceSensorIOLaserCANConfiguration(
-            Optional<String> name,
-            CanDeviceId id,
-            Resistance armatureResistance,
-            Optional<DistanceSensorIOLaserCANConfiguration> LaserCAN)
-        {
-            this(
-                name,
-                id,
-                armatureResistance,
-                LaserCAN,
-                ControlType.VOLTAGE,
-                1,
-                1,
-                new PID(0, 0, 0),
-                new PID(0, 0, 0),
-                RotationsPerSecond.of(0.0),
-                RotationsPerSecondPerSecond.of(0.0),
-                RotationsPerSecondPerSecond.per(Second).of(0.0));
+                name.orElse("id " + id.getDeviceNumber()), 
+                id, 
+                fovConfigs, 
+                rangingMode,
+                timingBudget);
         }
     }
 
@@ -180,202 +64,50 @@ public class DistanceSensorIOLaserCAN implements DistanceSensorIO {
     @Getter
     private final DistanceSensorIOLaserCANConfiguration configuration;
 
-    private final LaserCAN DistanceSensor;
+    private LaserCanInterface distanceSensor = null;
+    private int tries = 0;
+    private boolean hasConfiged = false;
 
-    @Getter
-    private final DistanceSensorIntrinsics DistanceSensorIntrinsics;
+    private Distance currentDistance;
 
-    private final StatusSignal<Boolean> isProLicensed;
-    private final StatusSignal<Angle> position;
-    private final StatusSignal<AngularVelocity> velocity;
-    private final StatusSignal<Voltage> supplyVoltage;
-    private final StatusSignal<Current> supplyCurrent;
-    private final StatusSignal<Current> torqueCurrent;
-    private final StatusSignal<Temperature> temperature;
-    private final StatusSignal<Double> closedLoopError;
-    private final StatusSignal<Double> closedLoopTarget;
-    private final StatusSignal<Double> closedLoopTargetDerivative;
+    private final Alert failedConfig =
+        new Alert("Failed to configure LaserCAN!", AlertType.kError);
+    private final Alert sensorAlert =
+        new Alert("Failed to get LaserCAN measurement", Alert.AlertType.kWarning);
 
-    private final ControlType closedLoopControlType;
-
-    private final VoltageOut voltageOut =
-        new VoltageOut(0.0).withEnableFOC(true).withUpdateFreqHz(0.0);
-    private final TorqueCurrentFOC currentOut = new TorqueCurrentFOC(0.0).withUpdateFreqHz(0.0);
-
-    private final PositionTorqueCurrentFOC positionCurrent =
-        new PositionTorqueCurrentFOC(0.0).withUpdateFreqHz(0.0);
-    private final VelocityTorqueCurrentFOC velocityCurrent =
-        new VelocityTorqueCurrentFOC(0.0).withUpdateFreqHz(0.0);
-
-    private final PositionVoltage positionVoltage =
-        new PositionVoltage(0.0).withEnableFOC(true).withUpdateFreqHz(0.0);
-    private final VelocityVoltage velocityVoltage =
-        new VelocityVoltage(0.0).withEnableFOC(true).withUpdateFreqHz(0.0);
-
-    private final MotionMagicTorqueCurrentFOC motionMagicPositionCurrent =
-        new MotionMagicTorqueCurrentFOC(0.0).withUpdateFreqHz(0.0);
-    private final MotionMagicVelocityTorqueCurrentFOC motionMagicVelocityCurrent =
-        new MotionMagicVelocityTorqueCurrentFOC(0.0).withUpdateFreqHz(0.0);
-
-    private final MotionMagicVoltage motionMagicPositionVoltage =
-        new MotionMagicVoltage(0.0).withEnableFOC(true).withUpdateFreqHz(0.0);
-    private final MotionMagicVelocityVoltage motionMagicVelocityVoltage =
-        new MotionMagicVelocityVoltage(0.0).withEnableFOC(true).withUpdateFreqHz(0.0);
-
-    private final CoastOut coastOut = new CoastOut();
-    private final StaticBrake staticBrake = new StaticBrake();
-
-    private Double g = 0.0;
-
-    private final Alert currentControlOnUnlicensedDistanceSensor;
-    private final Alert fusedLaserCANOnUnlicensedDistanceSensor;
-    private final Alert syncLaserCANOnUnlicensedDistanceSensor;
-
-    private Alert LaserCANOnDifferentBus = null;
+    private boolean validStatus = true;
 
     /**
-     * Constructor for DistanceSensorIOLaserCAN that initializes the DistanceSensor, its status signals, and applies
-     * configurations for motion control.
+     * Constructor for DistanceSensorIOLaserCAN that initializes the LaserCAN, its status signals, and applies
+     * configurations for the ToF Field of view and proximity detection.
      *
-     * @param builder The LaserCANBuilder instance used to build the DistanceSensorIOLaserCAN object.
+     * @param builder The instance used to build the DistanceSensorIOCANrange object.
      */
-    public DistanceSensorIOLaserCAN(DistanceSensorIOLaserCANConfiguration config)
+    public DistanceSensorIOLaserCAN(DistanceSensorIOLaserCANConfiguration config, boolean isSim)
     {
         configuration = config;
-
-        DistanceSensor = config.DistanceSensor();
-        LaserCANConfiguration configuration = new LaserCANConfiguration();
-
-        isProLicensed = DistanceSensor.getIsProLicensed();
-        position = DistanceSensor.getPosition();
-        velocity = DistanceSensor.getVelocity();
-        supplyVoltage = DistanceSensor.getDistanceSensorVoltage();
-        supplyCurrent = DistanceSensor.getSupplyCurrent();
-        torqueCurrent = DistanceSensor.getTorqueCurrent();
-        temperature = DistanceSensor.getDeviceTemp();
-        closedLoopError = DistanceSensor.getClosedLoopError();
-        closedLoopTarget = DistanceSensor.getClosedLoopReference();
-        closedLoopTargetDerivative = DistanceSensor.getClosedLoopReferenceSlope();
-
-        // Set update frequencies for the StatusSignals of interest
-        Phoenix6Util.checkErrorAndRetry(
-            () -> BaseStatusSignal.setUpdateFrequencyForAll(
-                100,
-                position,
-                velocity,
-                supplyCurrent,
-                supplyCurrent,
-                torqueCurrent,
-                temperature));
-        Phoenix6Util.checkErrorAndRetry(
-            () -> BaseStatusSignal.setUpdateFrequencyForAll(
-                200,
-                closedLoopError,
-                closedLoopTarget,
-                closedLoopTargetDerivative));
-        DistanceSensor.optimizeBusUtilization(0, 1.0);
-
-        DistanceSensorIntrinsics = config.intrinsics();
-
         name = config.name();
 
-        currentControlOnUnlicensedDistanceSensor =
-            new Alert("Current control used on unlicensed DistanceSensor " + name, AlertType.kError);
-        fusedLaserCANOnUnlicensedDistanceSensor =
-            new Alert("FusedLaserCAN used on unlicensed DistanceSensor " + name, AlertType.kError);
-        syncLaserCANOnUnlicensedDistanceSensor =
-            new Alert("SyncLaserCAN used on unlicensed DistanceSensor " + name, AlertType.kError);
-
-        var closedLoopControlType = config.closedLoopControlType();
-        if (!isProLicensed.getValue() && !RobotBase.isSimulation()) {
-            if (config.closedLoopControlType() == ControlType.CURRENT) {
-                currentControlOnUnlicensedDistanceSensor.set(true);
-                closedLoopControlType = ControlType.VOLTAGE;
-            }
-
-            if (config.LaserCAN().isPresent()) {
-                if (config.LaserCAN().get()
-                    .integrationType() == FeedbackSensorSourceValue.FusedLaserCAN) {
-                    fusedLaserCANOnUnlicensedDistanceSensor.set(true);
-                }
-                if (config.LaserCAN().get()
-                    .integrationType() == FeedbackSensorSourceValue.SyncLaserCAN) {
-                    syncLaserCANOnUnlicensedDistanceSensor.set(true);
-                }
-            }
-        }
-        this.closedLoopControlType = closedLoopControlType;
-
-        configuration.Slot0
-            .withKP(config.positionPID().p())
-            .withKI(config.positionPID().i())
-            .withKD(config.positionPID().d());
-
-        configuration.Slot1
-            .withKP(config.velocityPID().p())
-            .withKI(config.velocityPID().i())
-            .withKD(config.velocityPID().d());
-
-        configuration.MotionMagic
-            .withMotionMagicCruiseVelocity(config.cruiseVelocity())
-            .withMotionMagicAcceleration(config.accelerationConstraint())
-            .withMotionMagicJerk(config.jerkConstraint());
-
-        if (config.LaserCAN().isPresent()) {
-            var LaserCANConfig = config.LaserCAN().get();
-            LaserCANOnDifferentBus =
-                new Alert("LaserCAN " + LaserCANConfig.name() + " is not on the same bus as DistanceSensor "
-                    + name, AlertType.kError);
-
-            if (!config.id().getBus().equals(LaserCANConfig.id().getBus())) {
-                LaserCANOnDifferentBus.set(true);
-            } else {
-                var LaserCANDeviceConfig = new LaserCANConfiguration();
-                LaserCANDeviceConfig.MagnetSensor = LaserCANConfig.magnetConfigs();
-                Phoenix6Util.applyAndCheckConfiguration(LaserCANConfig.LaserCAN(),
-                    LaserCANDeviceConfig);
-
-                LaserCANConfig.LaserCAN().optimizeBusUtilization(0, 1.0);
-
-                configuration.Feedback.FeedbackRemoteSensorID =
-                    LaserCANConfig.id().getDeviceNumber();
-
-                configuration.Feedback.FeedbackSensorSource = LaserCANConfig.integrationType();
-                configuration.Feedback.RotorToSensorRatio = config.rotorToSensorRatio();
-                configuration.Feedback.SensorToMechanismRatio = config.sensorToMechanismRatio();
+        distanceSensor = isSim
+            ? new LaserCANSim(name)
+            : new LaserCan(config.id().getDeviceNumber());
+        while (!hasConfiged && tries < 5) {
+            try {
+                distanceSensor.setRangingMode(config.rangingMode());
+                distanceSensor.setRegionOfInterest(config.fovConfigs());
+                distanceSensor.setTimingBudget(config.timingBudget());
+                failedConfig.set(false);
+                System.out.println("Succesfully configured " + name);
+                hasConfiged = true;
+            } catch (ConfigurationFailedException e) {
+                System.out.println("Configuration failed for " + name + "! " + e);
+                failedConfig.setText("Failed to configure " + name + "!");
+                failedConfig.set(true);
+                tries++;
             }
         }
 
-        Phoenix6Util.applyAndCheckConfiguration(DistanceSensor, configuration);
     }
-
-    private boolean isRunningPositionControl()
-    {
-        var control = DistanceSensor.getAppliedControl();
-        return (control instanceof PositionTorqueCurrentFOC)
-            || (control instanceof PositionVoltage)
-            || (control instanceof MotionMagicTorqueCurrentFOC)
-            || (control instanceof MotionMagicVoltage);
-    }
-
-    private boolean isRunningVelocityControl()
-    {
-        var control = DistanceSensor.getAppliedControl();
-        return (control instanceof VelocityTorqueCurrentFOC)
-            || (control instanceof VelocityVoltage)
-            || (control instanceof MotionMagicVelocityTorqueCurrentFOC)
-            || (control instanceof MotionMagicVelocityVoltage);
-    }
-
-    private boolean isRunningMotionMagic()
-    {
-        var control = DistanceSensor.getAppliedControl();
-        return (control instanceof MotionMagicTorqueCurrentFOC)
-            || (control instanceof MotionMagicVelocityTorqueCurrentFOC)
-            || (control instanceof MotionMagicVoltage)
-            || (control instanceof MotionMagicVelocityVoltage);
-    }
-
 
     /**
      * Updates the DistanceSensor inputs for tracking position, velocity, and other control parameters.
@@ -385,222 +117,104 @@ public class DistanceSensorIOLaserCAN implements DistanceSensorIO {
     @Override
     public void updateInputs(DistanceSensorIOInputs inputs)
     {
-        // Refreshes the signals for position, velocity, and other values
-        inputs.connected = BaseStatusSignal.refreshAll(
-            position,
-            velocity,
-            supplyVoltage,
-            supplyCurrent,
-            torqueCurrent,
-            temperature,
-            closedLoopError,
-            closedLoopTarget,
-            closedLoopTargetDerivative)
-            .isOK();
+        Measurement measurement = distanceSensor.getMeasurement();
+        if (measurement != null) {
+            if (measurement.status == LaserCan.LASERCAN_STATUS_VALID_MEASUREMENT) {
+                sensorAlert.set(false);
+                currentDistance = Millimeters.of(measurement.distance_mm);
+                inputs.ambientSignal = (double) measurement.ambient;
+                // The Region of interest:
+                // x and y are the center point
+                // w and h are the width and height of the region's rectangle
+                inputs.roiX = measurement.roi.x;
+                inputs.roiY = measurement.roi.y;
+                inputs.roiW = measurement.roi.w;
+                inputs.roiH = measurement.roi.h;
+                inputs.isShortMode = !measurement.is_long;
 
-        // Updates the inputs with the DistanceSensor values
-        inputs.position = position.getValue();
-        inputs.velocity = velocity.getValue();
-        inputs.appliedVoltage = supplyVoltage.getValue();
-        inputs.supplyCurrent = supplyCurrent.getValue();
-        inputs.torqueCurrent = torqueCurrent.getValue();
-        inputs.temperature = temperature.getValue();
-
-        // Updates position and velocity errors when relevant
-        var closedLoopErrorValue = closedLoopError.getValue();
-        var closedLoopTargetValue = closedLoopTarget.getValue();
-        inputs.positionError = isRunningPositionControl()
-            ? Rotations.of(closedLoopErrorValue)
-            : null;
-        inputs.activeTrajectoryPosition = isRunningPositionControl() && isRunningMotionMagic()
-            ? Rotations.of(closedLoopTargetValue)
-            : null;
-        if (isRunningVelocityControl()) {
-            inputs.velocityError = RotationsPerSecond.of(closedLoopErrorValue);
-            inputs.activeTrajectoryVelocity =
-                RotationsPerSecond.of(closedLoopTargetValue);
-        } else if (isRunningPositionControl() && isRunningMotionMagic()) {
-            var targetVelocity = closedLoopTargetDerivative.getValue();
-            inputs.velocityError = RotationsPerSecond.of(
-                targetVelocity - velocity.getValue().in(RotationsPerSecond));
-            inputs.activeTrajectoryVelocity = RotationsPerSecond.of(targetVelocity);
-        } else {
-            inputs.velocityError = null;
-            inputs.activeTrajectoryVelocity = null;
-        }
-    }
-
-    /**
-     * Sets the DistanceSensor to coast mode
-     */
-    @Override
-    public void runCoast()
-    {
-        DistanceSensor.setControl(coastOut);
-    }
-
-    /**
-     * Sets the DistanceSensor to brake mode
-     */
-    @Override
-    public void runBrake()
-    {
-        DistanceSensor.setControl(staticBrake);
-    }
-
-    /**
-     * Sets the DistanceSensor to run at a specified voltage.
-     *
-     * @param voltage The voltage to apply to the DistanceSensor.
-     */
-    @Override
-    public void runVoltage(Voltage voltage)
-    {
-        currentControlOnUnlicensedDistanceSensor.set(false);
-        DistanceSensor.setControl(voltageOut.withOutput(voltage));
-    }
-
-    /**
-     * Sets the DistanceSensor to run at a specified current.
-     *
-     * @param current The current to apply to the DistanceSensor.
-     */
-    @Override
-    public void runCurrent(Current current)
-    {
-        if (DistanceSensor.getIsProLicensed().getValue() && !RobotBase.isSimulation()) {
-            DistanceSensor.setControl(currentOut.withOutput(current));
-        } else {
-            currentControlOnUnlicensedDistanceSensor.set(true);
-        }
-    }
-
-    /**
-     * Updates the current feed-forward for the DistanceSensor controls. This is used to adjust the DistanceSensor
-     * behavior to achieve the desired performance.
-     *
-     * @param newFF The new feed-forward value to set for the DistanceSensor.
-     */
-    private void updateCurrentFeedForward(double newFF)
-    {
-        var prevControl = DistanceSensor.getAppliedControl();
-        if (prevControl instanceof PositionTorqueCurrentFOC control) {
-            control.withFeedForward(newFF);
-        } else if (prevControl instanceof VelocityTorqueCurrentFOC control) {
-            control.withFeedForward(newFF);
-        } else if (prevControl instanceof PositionVoltage control) {
-            control.withFeedForward(newFF);
-        } else if (prevControl instanceof VelocityVoltage control) {
-            control.withFeedForward(newFF);
-        } else if (prevControl instanceof MotionMagicTorqueCurrentFOC control) {
-            control.withFeedForward(newFF);
-        } else if (prevControl instanceof MotionMagicVelocityTorqueCurrentFOC control) {
-            control.withFeedForward(newFF);
-        } else if (prevControl instanceof MotionMagicVoltage control) {
-            control.withFeedForward(newFF);
-        } else if (prevControl instanceof MotionMagicVelocityVoltage control) {
-            control.withFeedForward(newFF);
-        }
-    }
-
-    /**
-     * Sets the feed-forward constant to adjust the DistanceSensor's behavior for position and velocity
-     * control. This allows for better performance when operating in motion control modes.
-     *
-     * @param g The feed-forward value to set.
-     */
-    @Override
-    public void setG(double g)
-    {
-        this.g = g;
-        updateCurrentFeedForward(g);
-    }
-
-    /**
-     * Commands the DistanceSensor to move to a specified position using position control.
-     *
-     * @param positionRotations The target position.
-     */
-    @Override
-    public void runToPosition(Angle position)
-    {
-        if (closedLoopControlType == ControlType.CURRENT) {
-            if (!DistanceSensor.getIsProLicensed().getValue() && !RobotBase.isSimulation()) {
-                currentControlOnUnlicensedDistanceSensor.set(true);
-                return;
+            } else {
+                sensorAlert.setText("Failed to get LaserCAN ID: " + name
+                    + ", no valid measurement");
+                sensorAlert.set(true);
+                currentDistance = Millimeters.of(Double.POSITIVE_INFINITY);
+                inputs.connected = false;
             }
-            DistanceSensor.setControl(positionCurrent.withPosition(position).withFeedForward(g).withSlot(0));
-            currentControlOnUnlicensedDistanceSensor.set(false);
         } else {
-            DistanceSensor.setControl(positionVoltage.withPosition(position).withFeedForward(g).withSlot(0));
+            sensorAlert.setText("Failed to get LaserCAN ID: " + name
+                + ", measurement null");
+            sensorAlert.set(true);
+            currentDistance = Millimeters.of(Double.POSITIVE_INFINITY);
+        }
+        Logger.recordOutput("LaserCANSensors/LaserCAN" + name,
+            currentDistance.in(Inches));
+        inputs.distance = currentDistance;
+    }
+    
+    /**
+     * Updates the current settings that determine whether the CANrange 'detects' an object.
+     * Call this method to achieve the desired performance.
+     *
+     * @param mode The LONG Ranging Mode can be used to identify targets at longer distances
+     * than the short ranging mode (up to 4m), but is more susceptible to ambient
+     * light.
+     * The SHORT Ranging Mode is used to detect targets at 1.3m and lower. Although 
+     * shorter than the Long ranging mode, this mode is less susceptible to ambient
+     * light.
+    * @throws ConfigurationFailedException 
+    */
+    private void setRangingMode(RangingMode mode)
+    {
+        hasConfiged = false;
+        tries = 0;
+        while (!hasConfiged && tries < 5) {
+            try {
+                distanceSensor.setRangingMode(mode);
+                hasConfiged = true;
+            } catch (ConfigurationFailedException e) {
+                System.out.println("Configuration failed for " + name + "! " + e);
+                failedConfig.setText("Failed to configure " + name + " new ranging mode!");
+                failedConfig.set(true);
+                tries++;
+            }
         }
     }
 
     /**
-     * Commands the DistanceSensor to run at a specified velocity using velocity control.
+     * Updates the current settings that determine whether the center and extent of the CANrange's view
+     * Call this method to achieve the desired performance.
      *
-     * @param velocityRPS The target velocity.
+     * @param newFOVCenterX Specifies the target center of the Field of View in the X direction, between +/- 11.8
+     * @param newFOVCenterY Specifies the target center of the Field of View in the Y direction, between +/- 11.8
+     * @param newFOVRangeX Specifies the target range of the Field of View in the X direction. The magnitude of this is capped to abs(27 - 2*FOVCenterY).
+     * @param newFOVRangeY Specifies the target range of the Field of View in the Y direction. The magnitude of this is capped to abs(27 - 2*FOVCenterY).
+     * 
      */
-    @Override
-    public void runToVelocity(AngularVelocity velocity)
+    private void setFOVParams(int newFOVCenterX, int newFOVCenterY, int newFOVRangeX, int newFOVRangeY)
     {
-        if (closedLoopControlType == ControlType.CURRENT) {
-            if (!DistanceSensor.getIsProLicensed().getValue() && !RobotBase.isSimulation()) {
-                currentControlOnUnlicensedDistanceSensor.set(true);
-                return;
+        RegionOfInterest config = new RegionOfInterest(newFOVCenterX, newFOVCenterY, newFOVRangeX, newFOVRangeY);
+        hasConfiged = false;
+        tries = 0;
+        while (!hasConfiged && tries < 5) {
+            try {
+                distanceSensor.setRegionOfInterest(config);
+                hasConfiged = true;
+            } catch (ConfigurationFailedException e) {
+                System.out.println("Configuration failed for " + name + "! " + e);
+                failedConfig.setText("Failed to configure " + name + " new FOV params!");
+                failedConfig.set(true);
+                tries++;
             }
-            DistanceSensor.setControl(velocityCurrent.withFeedForward(g).withSlot(1));
-            currentControlOnUnlicensedDistanceSensor.set(false);
-        } else {
-            DistanceSensor.setControl(velocityVoltage.withFeedForward(g).withSlot(1));
         }
     }
 
-    /**
-     * Commands the DistanceSensor to follow a motion profile to reach a target position.
-     *
-     * @param positionRotations The target position.
-     */
-    @Override
-    public void runMotionProfiledPosition(Angle position)
+    public DistanceSensorIOLaserCANConfiguration getLaserCANConfiguration() 
     {
-        if (closedLoopControlType == ControlType.CURRENT) {
-            if (!DistanceSensor.getIsProLicensed().getValue() && !RobotBase.isSimulation()) {
-                currentControlOnUnlicensedDistanceSensor.set(true);
-                return;
-            }
-            DistanceSensor.setControl(
-                motionMagicPositionCurrent.withPosition(position).withFeedForward(g).withSlot(0));
-            currentControlOnUnlicensedDistanceSensor.set(false);
-        } else {
-            DistanceSensor.setControl(
-                motionMagicPositionVoltage.withPosition(position).withFeedForward(g).withSlot(0));
-        }
-    }
-
-    /**
-     * Commands the DistanceSensor to follow a motion profile to reach a target velocity.
-     *
-     * @param velocityRPS The target velocity.
-     */
-    @Override
-    public void runMotionProfiledVelocity(AngularVelocity velocity)
-    {
-        if (closedLoopControlType == ControlType.CURRENT) {
-            if (!DistanceSensor.getIsProLicensed().getValue() && !RobotBase.isSimulation()) {
-                currentControlOnUnlicensedDistanceSensor.set(true);
-                return;
-            }
-            DistanceSensor.setControl(motionMagicVelocityCurrent.withFeedForward(g).withSlot(1));
-            currentControlOnUnlicensedDistanceSensor.set(false);
-        } else {
-            DistanceSensor.setControl(motionMagicVelocityVoltage.withFeedForward(g).withSlot(1));
-        }
+        return configuration;
     }
 
     @Override
-    public void setPosition(Angle position)
-    {
-        DistanceSensor.setPosition(position);
+    public DistanceSensorIOCANrangeConfiguration getCANrangeConfiguration() {
+        return null;
     }
+
 }

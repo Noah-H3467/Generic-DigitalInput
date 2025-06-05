@@ -41,8 +41,6 @@ public class DistanceSensor {
         io.updateInputs(inputs);
         Logger.processInputs(io.getConfiguration().name(), inputs);
 
-        io.setG(gravitySupplier.getAsDouble());
-
         disconnectedAlert.set(!isConnected());
     }
 
@@ -64,7 +62,7 @@ public class DistanceSensor {
         return inputs.distance;
     }
 
-    /** Standard Deviation of the DistanceSensor measurement. */
+    /** Standard Deviation of the CANrange measurement. */
     public Distance getDistanceStdDev()
     {
         return inputs.distanceStdDev;
@@ -76,7 +74,7 @@ public class DistanceSensor {
         return inputs.ambientSignal;
     }
 
-    /** Actual center of the FOV in the X direction. */
+    /** CANrange: Actual center of the FOV in the X direction. */
     public Angle getRealFOVCenterX()
     {
         return inputs.fovCenterX;
@@ -99,10 +97,29 @@ public class DistanceSensor {
     {
         return inputs.fovRangeY;
     }
-    /** DistanceSensor temperature in degrees. */
-    // public Temperature getTemperature()
-    // {
-    //     return inputs.temperature;
-    // }
+
+    /** LaserCAN: Actual center of the ROI in the X direction. */
+    public int getRegionOfInterestX()
+    {
+        return inputs.roiX;
+    }
+
+    /** Actual center of the ROI in the Y direction. */
+    public int getRegionOfInterestY()
+    {
+        return inputs.roiY;
+    }
+
+    /** Actual width of the ROI. */
+    public int getRegionOfInterestWidth()
+    {
+        return inputs.roiW;
+    }
+
+    /** Actual height of the ROI. */
+    public int getRegionOfInterestHeight()
+    {
+        return inputs.roiH;
+    }
 
 }

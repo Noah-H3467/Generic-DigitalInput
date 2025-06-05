@@ -1,9 +1,10 @@
 package frc.robot.genericSubsystems.GenericDistanceSensor;
 
+import com.ctre.phoenix6.configs.FovParamsConfigs;
+import com.ctre.phoenix6.configs.ProximityParamsConfigs;
+
 import edu.wpi.first.units.measure.Angle;
-import edu.wpi.first.units.measure.AngularVelocity;
 import edu.wpi.first.units.measure.Current;
-import edu.wpi.first.units.measure.Voltage;
 import frc.robot.util.drivers.CanDeviceId;
 
 public class DistanceSensorIOReplay implements DistanceSensorIO {
@@ -15,41 +16,7 @@ public class DistanceSensorIOReplay implements DistanceSensorIO {
     public void updateInputs(DistanceSensorIOInputs inputs)
     {}
 
-    @Override
-    public void runCoast()
-    {}
 
-    @Override
-    public void runBrake()
-    {}
-
-    @Override
-    public void runVoltage(Voltage voltage)
-    {}
-
-    @Override
-    public void runCurrent(Current current)
-    {}
-
-    @Override
-    public void setG(double g)
-    {}
-
-    @Override
-    public void runToPosition(Angle position)
-    {}
-
-    @Override
-    public void runToVelocity(AngularVelocity velocity)
-    {}
-
-    @Override
-    public void runMotionProfiledPosition(Angle position)
-    {}
-
-    @Override
-    public void runMotionProfiledVelocity(AngularVelocity velocity)
-    {}
 
     @Override
     public DistanceSensorConfiguration getConfiguration()
@@ -62,11 +29,6 @@ public class DistanceSensorIOReplay implements DistanceSensorIO {
                 return new CanDeviceId(0);
             }
 
-            @Override
-            public DistanceSensorIntrinsics intrinsics()
-            {
-                return new DistanceSensorIntrinsics();
-            }
 
             @Override
             public String name()
@@ -75,14 +37,18 @@ public class DistanceSensorIOReplay implements DistanceSensorIO {
             }
 
             @Override
-            public ControlType closedLoopControlType()
+            public FovParamsConfigs fovConfigs()
             {
-                return ControlType.VOLTAGE;
+                return new FovParamsConfigs();
+            }
+
+            @Override
+            public ProximityParamsConfigs proximityConfigs()
+            {
+                return new ProximityParamsConfigs();
             }
         };
     }
 
-    @Override
-    public void setPosition(Angle position)
-    {}
+
 }

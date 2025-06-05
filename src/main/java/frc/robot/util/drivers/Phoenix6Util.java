@@ -9,8 +9,10 @@ package frc.robot.util.drivers;
 
 import com.ctre.phoenix6.StatusCode;
 import com.ctre.phoenix6.configs.CANcoderConfiguration;
+import com.ctre.phoenix6.configs.CANrangeConfiguration;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
 import com.ctre.phoenix6.hardware.CANcoder;
+import com.ctre.phoenix6.hardware.CANrange;
 import com.ctre.phoenix6.hardware.TalonFX;
 import edu.wpi.first.wpilibj.Alert;
 import edu.wpi.first.wpilibj.Alert.AlertType;
@@ -147,6 +149,42 @@ public class Phoenix6Util {
         return false;
     }
 
+    public static boolean applyAndCheckConfiguration(
+        CANrange CANRange, CANrangeConfiguration config, int numTries)
+    {
+        for (int i = 0; i < numTries; i++) {
+            if (checkErrorAndRetry(() -> CANRange.getConfigurator().apply(config))) {
+                // API says we applied config, lets make sure it's right
+                if (readAndVerifyConfiguration(CANRange, config)) {
+                    return true;
+                } else {
+                    DriverStation.reportWarning(
+                        "Failed to verify config for CANcoder ["
+                            + CANRange.getDeviceID()
+                            + "] (attempt "
+                            + (i + 1)
+                            + " of "
+                            + numTries
+                            + ")",
+                        false);
+                }
+            } else {
+                DriverStation.reportWarning(
+                    "Failed to apply config for CANcoder ["
+                        + CANRange.getDeviceID()
+                        + "] (attempt "
+                        + (i + 1)
+                        + " of "
+                        + numTries
+                        + ")",
+                    false);
+            }
+        }
+        DriverStation.reportError(
+            "Failed to apply config for CANrange after " + numTries + " attempts", false);
+        return false;
+    }
+
     public static boolean readAndVerifyConfiguration(TalonFX talon, TalonFXConfiguration config)
     {
         TalonFXConfiguration readConfig = new TalonFXConfiguration();
@@ -188,6 +226,27 @@ public class Phoenix6Util {
         }
     }
 
+    public static boolean readAndVerifyConfiguration(CANrange CANRange,
+        CANrangeConfiguration config)
+    {
+        CANrangeConfiguration readConfig = new CANrangeConfiguration();
+        if (!checkErrorAndRetry(() -> CANRange.getConfigurator().refresh(readConfig))) {
+            // could not get config!
+            DriverStation.reportWarning(
+                "Failed to read config for CANcoder [" + CANRange.getDeviceID() + "]", false);
+            return false;
+        } else if (!CANrangeConfigEquality.isEqual(config, readConfig)) {
+            // configs did not match
+            DriverStation.reportWarning(
+                "Configuration verification failed for talon [" + CANRange.getDeviceID() + "]",
+                false);
+            return false;
+        } else {
+            // configs read and match, Talon OK
+            return true;
+        }
+    }
+
     public static boolean applyAndCheckConfiguration(TalonFX talon, TalonFXConfiguration config)
     {
         boolean result = applyAndCheckConfiguration(talon, config, 5);
@@ -206,6 +265,18 @@ public class Phoenix6Util {
 
         configResult &= result;
         configAlert.setText(CANcoder.getDeviceID() + " failed to configure correctly");
+        configAlert.set(!configResult);
+
+        return result;
+    }
+
+    public static boolean applyAndCheckConfiguration(CANrange CANRange,
+        CANrangeConfiguration config)
+    {
+        boolean result = applyAndCheckConfiguration(CANRange, config, 5);
+
+        configResult &= result;
+        configAlert.setText(CANRange.getDeviceID() + " failed to configure correctly");
         configAlert.set(!configResult);
 
         return result;

@@ -1,46 +1,25 @@
 package frc.robot.genericSubsystems.GenericDistanceSensor;
 
-import static edu.wpi.first.units.Units.RadiansPerSecond;
-import static edu.wpi.first.units.Units.Rotations;
-import static edu.wpi.first.units.Units.RotationsPerSecond;
-import static edu.wpi.first.units.Units.RotationsPerSecondPerSecond;
-import static edu.wpi.first.units.Units.Second;
-import static edu.wpi.first.units.Units.Volt;
-import static edu.wpi.first.units.Units.VoltsPerRadianPerSecond;
 import java.util.Optional;
 import com.ctre.phoenix6.BaseStatusSignal;
 import com.ctre.phoenix6.StatusSignal;
-import com.ctre.phoenix6.configs.MagnetSensorConfigs;
 import com.ctre.phoenix6.configs.ProximityParamsConfigs;
 import com.ctre.phoenix6.configs.CANrangeConfiguration;
 import com.ctre.phoenix6.configs.FovParamsConfigs;
 import com.ctre.phoenix6.hardware.CANrange;
-import com.ctre.phoenix6.signals.FeedbackSensorSourceValue;
-import edu.wpi.first.units.AngularAccelerationUnit;
-import edu.wpi.first.units.AngularVelocityUnit;
-import edu.wpi.first.units.VoltageUnit;
+
 import edu.wpi.first.units.measure.Angle;
-import edu.wpi.first.units.measure.AngularAcceleration;
-import edu.wpi.first.units.measure.AngularVelocity;
-import edu.wpi.first.units.measure.Current;
 import edu.wpi.first.units.measure.Distance;
-import edu.wpi.first.units.measure.Per;
-import edu.wpi.first.units.measure.Resistance;
-import edu.wpi.first.units.measure.Temperature;
-import edu.wpi.first.units.measure.Velocity;
 import edu.wpi.first.units.measure.Voltage;
-import edu.wpi.first.wpilibj.Alert;
-import edu.wpi.first.wpilibj.RobotBase;
-import edu.wpi.first.wpilibj.Alert.AlertType;
+import frc.robot.genericSubsystems.GenericDistanceSensor.DistanceSensorIOLaserCAN.DistanceSensorIOLaserCANConfiguration;
 import frc.robot.util.drivers.CanDeviceId;
 import frc.robot.util.drivers.Phoenix6Util;
 import lombok.Getter;
-import lombok.experimental.var;
 
 /**
- * The DistanceSensorIOCANrange class represents a DistanceSensor interface for the CANrange DistanceSensor controller. It
- * integrates with the CTRE Phoenix 6 hardware and provides methods for controlling the DistanceSensor,
- * including position, velocity, current, and motion profile control.
+ * The DistanceSensorIOCANrange class represents a DistanceSensor interface for the CANrange distance sensor. It
+ * integrates with the CTRE Phoenix 6 hardware and provides methods for customizing the Distance Sensor,
+ * including FOV and Proximity constants.
  */
 public class DistanceSensorIOCANrange implements DistanceSensorIO {
 
@@ -67,8 +46,6 @@ public class DistanceSensorIOCANrange implements DistanceSensorIO {
 
     }
 
-
-    @Getter
     private final String name;
 
     @Getter
@@ -76,7 +53,6 @@ public class DistanceSensorIOCANrange implements DistanceSensorIO {
 
     private final CANrange distanceSensor;
 
-    private final StatusSignal<Boolean> isProLicensed;
     private final StatusSignal<Distance> distance;
     private final StatusSignal<Distance> distanceStdDev;
     private final StatusSignal<Voltage> supplyVoltage;
@@ -87,22 +63,23 @@ public class DistanceSensorIOCANrange implements DistanceSensorIO {
     private final StatusSignal<Angle> fovRangeY;
     private final StatusSignal<Boolean> isDetected;
 
-    private final ControlType closedLoopControlType;
-
     /**
-     * Constructor for DistanceSensorIOCANrange that initializes the DistanceSensor, its status signals, and applies
-     * configurations for motion control.
+     * Constructor for DistanceSensorIOCANrange that initializes the CANrange, its status signals, and applies
+     * configurations for the ToF Field of view and proximity detection.
      *
-     * @param builder The CANrangeBuilder instance used to build the DistanceSensorIOCANrange object.
+     * @param builder The instance used to build the DistanceSensorIOCANrange object.
      */
     public DistanceSensorIOCANrange(DistanceSensorIOCANrangeConfiguration config)
     {
         configuration = config;
+        name = config.name();
 
         distanceSensor = config.CANRange();
         CANrangeConfiguration configuration = new CANrangeConfiguration();
+        configuration.FovParams = config.fovConfigs();
+        configuration.ProximityParams = config.proximityConfigs();
+        distanceSensor.getConfigurator().apply(configuration);
 
-        isProLicensed = distanceSensor.getIsProLicensed();
         distance = distanceSensor.getDistance();
         distanceStdDev = distanceSensor.getDistanceStdDev();
         supplyVoltage = distanceSensor.getSupplyVoltage();
@@ -128,7 +105,7 @@ public class DistanceSensorIOCANrange implements DistanceSensorIO {
 
         distanceSensor.optimizeBusUtilization(0, 1.0);
 
-        name = config.name();
+        Phoenix6Util.applyAndCheckConfiguration(distanceSensor, configuration);
 
     }
 
@@ -208,4 +185,15 @@ public class DistanceSensorIOCANrange implements DistanceSensorIO {
         distanceSensor.getConfigurator().apply(config);
     }
 
+    @Override
+    public DistanceSensorIOLaserCANConfiguration getLaserCANConfiguration() 
+    {
+        return null;
+    }
+
+    @Override
+    public DistanceSensorIOCANrangeConfiguration getCANrangeConfiguration() 
+    {
+        return configuration;
+    }
 }
