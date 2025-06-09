@@ -1,4 +1,4 @@
-package frc.robot.genericSubsystems.GenericDistanceSensor;
+package frc.robot.GenericHardware.GenericDistanceSensor;
 
 import com.ctre.phoenix6.configs.FovParamsConfigs;
 import com.ctre.phoenix6.configs.ProximityParamsConfigs;

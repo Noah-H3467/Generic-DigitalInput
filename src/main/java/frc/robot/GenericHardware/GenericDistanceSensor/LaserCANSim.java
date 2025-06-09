@@ -1,4 +1,4 @@
-package frc.robot.genericSubsystems.GenericDistanceSensor;
+package frc.robot.GenericHardware.GenericDistanceSensor;
 
 import au.grapplerobotics.ConfigurationFailedException;
 import au.grapplerobotics.interfaces.LaserCanInterface;

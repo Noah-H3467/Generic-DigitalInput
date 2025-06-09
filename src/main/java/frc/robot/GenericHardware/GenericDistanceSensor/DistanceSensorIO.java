@@ -1,4 +1,4 @@
-package frc.robot.genericSubsystems.GenericDistanceSensor;
+package frc.robot.GenericHardware.GenericDistanceSensor;
 
 import static edu.wpi.first.units.Units.Radians;
 import static edu.wpi.first.units.Units.Volts;
@@ -7,8 +7,8 @@ import org.littletonrobotics.junction.AutoLog;
 import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.units.measure.Distance;
 import edu.wpi.first.units.measure.Voltage;
-import frc.robot.genericSubsystems.GenericDistanceSensor.DistanceSensorIOCANrange.DistanceSensorIOCANrangeConfiguration;
-import frc.robot.genericSubsystems.GenericDistanceSensor.DistanceSensorIOLaserCAN.DistanceSensorIOLaserCANConfiguration;
+import frc.robot.GenericHardware.GenericDistanceSensor.DistanceSensorIOCANrange.DistanceSensorIOCANrangeConfiguration;
+import frc.robot.GenericHardware.GenericDistanceSensor.DistanceSensorIOLaserCAN.DistanceSensorIOLaserCANConfiguration;
 
 public interface DistanceSensorIO {
 

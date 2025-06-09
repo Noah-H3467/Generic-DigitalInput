@@ -1,4 +1,4 @@
-package frc.robot.genericSubsystems.GenericDigitalInput;
+package frc.robot.GenericHardware.GenericDigitalInput;
 
 public class DigitalInputIOReplay implements DigitalInputIO {
 

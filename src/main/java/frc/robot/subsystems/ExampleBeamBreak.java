@@ -6,9 +6,9 @@ import org.littletonrobotics.junction.Logger;
 
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
-import frc.robot.genericSubsystems.GenericDigitalInput.DigitalInput;
-import frc.robot.genericSubsystems.GenericDigitalInput.DigitalInputIOWPILib;
-import frc.robot.genericSubsystems.GenericDigitalInput.DigitalInputIOWPILib.DigitalInputIOConfiguration;
+import frc.robot.GenericHardware.GenericDigitalInput.DigitalInput;
+import frc.robot.GenericHardware.GenericDigitalInput.DigitalInputIOWPILib;
+import frc.robot.GenericHardware.GenericDigitalInput.DigitalInputIOWPILib.DigitalInputIOConfiguration;
 
 public class ExampleBeamBreak extends SubsystemBase {
     

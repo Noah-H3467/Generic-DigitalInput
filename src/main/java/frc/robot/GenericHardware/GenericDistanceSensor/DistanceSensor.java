@@ -1,4 +1,4 @@
-package frc.robot.genericSubsystems.GenericDistanceSensor;
+package frc.robot.GenericHardware.GenericDistanceSensor;
 
 import java.util.Optional;
 import java.util.function.DoubleSupplier;
@@ -30,12 +30,6 @@ public class DistanceSensor {
             new Alert("DistanceSensor " + io.getConfiguration().name() + " disconnected", AlertType.kError);
     }
 
-    public DistanceSensor withGravitySupplier(DoubleSupplier gravitySupplier)
-    {
-        this.gravitySupplier = gravitySupplier;
-        return this;
-    }
-
     public void update()
     {
         io.updateInputs(inputs);
@@ -50,7 +44,7 @@ public class DistanceSensor {
         return inputs.connected;
     }
 
-    /** Within configured proximity. */
+    /** Object within configured proximity. */
     public boolean isDetected()
     {
         return inputs.detected;

@@ -1,4 +1,4 @@
-package frc.robot.genericSubsystems.GenericDistanceSensor;
+package frc.robot.GenericHardware.GenericDistanceSensor;
 
 import java.util.Optional;
 import com.ctre.phoenix6.BaseStatusSignal;
@@ -11,7 +11,7 @@ import com.ctre.phoenix6.hardware.CANrange;
 import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.units.measure.Distance;
 import edu.wpi.first.units.measure.Voltage;
-import frc.robot.genericSubsystems.GenericDistanceSensor.DistanceSensorIOLaserCAN.DistanceSensorIOLaserCANConfiguration;
+import frc.robot.GenericHardware.GenericDistanceSensor.DistanceSensorIOLaserCAN.DistanceSensorIOLaserCANConfiguration;
 import frc.robot.util.drivers.CanDeviceId;
 import frc.robot.util.drivers.Phoenix6Util;
 import lombok.Getter;

@@ -1,9 +1,7 @@
-package frc.robot.genericSubsystems.GenericDistanceSensor;
+package frc.robot.GenericHardware.GenericDistanceSensor;
 
 import org.littletonrobotics.junction.Logger;
 
-import com.ctre.phoenix6.BaseStatusSignal;
-import com.ctre.phoenix6.configs.CANrangeConfiguration;
 import com.ctre.phoenix6.configs.FovParamsConfigs;
 import com.ctre.phoenix6.configs.ProximityParamsConfigs;
 
@@ -17,16 +15,14 @@ import au.grapplerobotics.interfaces.LaserCanInterface.TimingBudget;
 
 import java.util.Optional;
 
-import edu.wpi.first.units.measure.Current;
 import edu.wpi.first.units.measure.Distance;
-import edu.wpi.first.units.measure.Temperature;
 import edu.wpi.first.wpilibj.Alert;
-import edu.wpi.first.wpilibj.RobotBase;
 import edu.wpi.first.wpilibj.Alert.AlertType;
 import static edu.wpi.first.units.Units.*;
 
-import frc.robot.genericSubsystems.GenericDistanceSensor.DistanceSensorIOCANrange.DistanceSensorIOCANrangeConfiguration;
-import frc.robot.genericSubsystems.GenericDistanceSensor.DistanceSensorIOLaserCAN.DistanceSensorIOLaserCANConfiguration;
+import frc.robot.Constants;
+import frc.robot.GenericHardware.GenericDistanceSensor.DistanceSensorIOCANrange.DistanceSensorIOCANrangeConfiguration;
+import frc.robot.GenericHardware.GenericDistanceSensor.DistanceSensorIOLaserCAN.DistanceSensorIOLaserCANConfiguration;
 import frc.robot.util.drivers.CanDeviceId;
 import lombok.Getter;
 
@@ -38,21 +34,25 @@ public class DistanceSensorIOLaserCAN implements DistanceSensorIO {
     public record DistanceSensorIOLaserCANConfiguration(
         String name, 
         CanDeviceId id,
-        RegionOfInterest fovConfigs,
+        FovParamsConfigs fovConfigs,
+        ProximityParamsConfigs proximityConfigs,
+        RegionOfInterest roiConfigs,
         RangingMode rangingMode,
         TimingBudget timingBudget) {
 
         public DistanceSensorIOLaserCANConfiguration(
             Optional<String> name, 
             CanDeviceId id,
-            RegionOfInterest fovConfigs,
+            RegionOfInterest roiConfigs,
             RangingMode rangingMode,
             TimingBudget timingBudget) 
         {
             this(
                 name.orElse("id " + id.getDeviceNumber()), 
                 id, 
-                fovConfigs, 
+                new FovParamsConfigs(),
+                new ProximityParamsConfigs(),
+                roiConfigs, 
                 rangingMode,
                 timingBudget);
         }
@@ -61,7 +61,6 @@ public class DistanceSensorIOLaserCAN implements DistanceSensorIO {
     @Getter
     private final String name;
 
-    @Getter
     private final DistanceSensorIOLaserCANConfiguration configuration;
 
     private LaserCanInterface distanceSensor = null;
@@ -75,8 +74,6 @@ public class DistanceSensorIOLaserCAN implements DistanceSensorIO {
     private final Alert sensorAlert =
         new Alert("Failed to get LaserCAN measurement", Alert.AlertType.kWarning);
 
-    private boolean validStatus = true;
-
     /**
      * Constructor for DistanceSensorIOLaserCAN that initializes the LaserCAN, its status signals, and applies
      * configurations for the ToF Field of view and proximity detection.
@@ -88,25 +85,36 @@ public class DistanceSensorIOLaserCAN implements DistanceSensorIO {
         configuration = config;
         name = config.name();
 
-        distanceSensor = isSim
-            ? new LaserCANSim(name)
-            : new LaserCan(config.id().getDeviceNumber());
-        while (!hasConfiged && tries < 5) {
-            try {
-                distanceSensor.setRangingMode(config.rangingMode());
-                distanceSensor.setRegionOfInterest(config.fovConfigs());
-                distanceSensor.setTimingBudget(config.timingBudget());
-                failedConfig.set(false);
-                System.out.println("Succesfully configured " + name);
-                hasConfiged = true;
-            } catch (ConfigurationFailedException e) {
-                System.out.println("Configuration failed for " + name + "! " + e);
-                failedConfig.setText("Failed to configure " + name + "!");
-                failedConfig.set(true);
-                tries++;
-            }
-        }
+        distanceSensor = getLaserCanInterface(config);
 
+    }
+
+    /** Gets the LC interface */
+    public LaserCanInterface getLaserCanInterface(DistanceSensorIOLaserCANConfiguration config) {
+        if (distanceSensor != null) {
+            return distanceSensor;
+        } else {
+            LaserCanInterface lc;
+            lc = (Constants.currentMode == Constants.Mode.SIM)
+                ? new LaserCANSim(name)
+                : new LaserCan(config.id().getDeviceNumber());
+            while (!hasConfiged && tries < 5) {
+                try {
+                    lc.setRangingMode(config.rangingMode());
+                    lc.setRegionOfInterest(config.fovConfigs());
+                    lc.setTimingBudget(config.timingBudget());
+                    failedConfig.set(false);
+                    System.out.println("Succesfully configured " + name);
+                    hasConfiged = true;
+                } catch (ConfigurationFailedException e) {
+                    System.out.println("Configuration failed for " + name + "! " + e);
+                    failedConfig.setText("Failed to configure " + name + "!");
+                    failedConfig.set(true);
+                    tries++;
+                }
+            }
+            return lc;
+        }
     }
 
     /**
@@ -207,6 +215,7 @@ public class DistanceSensorIOLaserCAN implements DistanceSensorIO {
         }
     }
 
+    @Override
     public DistanceSensorIOLaserCANConfiguration getLaserCANConfiguration() 
     {
         return configuration;

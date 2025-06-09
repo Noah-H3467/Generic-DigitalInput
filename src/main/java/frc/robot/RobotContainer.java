@@ -6,10 +6,10 @@ package frc.robot;
 
 import java.util.Optional;
 
-import frc.robot.genericSubsystems.GenericDigitalInput.DigitalInputIOWPILib;
-import frc.robot.genericSubsystems.GenericDigitalInput.DigitalInputIOWPILib.DigitalInputIOConfiguration;
+import frc.robot.GenericHardware.GenericDigitalInput.DigitalInputIOWPILib;
+import frc.robot.GenericHardware.GenericDigitalInput.DigitalInputIOWPILib.DigitalInputIOConfiguration;
 import frc.robot.subsystems.ExampleBeamBreak;
-import frc.robot.genericSubsystems.GenericDigitalInput.DigitalInput;
+import frc.robot.GenericHardware.GenericDigitalInput.DigitalInput;
 import frc.robot.util.WindupXboxController;
 
 /**
