@@ -8,10 +8,13 @@ import com.ctre.phoenix6.configs.CANrangeConfiguration;
 import com.ctre.phoenix6.configs.FovParamsConfigs;
 import com.ctre.phoenix6.hardware.CANrange;
 
+import au.grapplerobotics.interfaces.LaserCanInterface.RangingMode;
+import au.grapplerobotics.interfaces.LaserCanInterface.RegionOfInterest;
+import au.grapplerobotics.interfaces.LaserCanInterface.TimingBudget;
+
 import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.units.measure.Distance;
 import edu.wpi.first.units.measure.Voltage;
-import frc.robot.GenericHardware.GenericDistanceSensor.DistanceSensorIOLaserCAN.DistanceSensorIOLaserCANConfiguration;
 import frc.robot.util.drivers.CanDeviceId;
 import frc.robot.util.drivers.Phoenix6Util;
 import lombok.Getter;
@@ -23,33 +26,38 @@ import lombok.Getter;
  */
 public class DistanceSensorIOCANrange implements DistanceSensorIO {
 
-    public record DistanceSensorIOCANrangeConfiguration(
+    public record DistanceSensorIOConfiguration(
         String name, 
         CanDeviceId id,
-        CANrange CANRange,
+        CANrange sensor,
         FovParamsConfigs fovConfigs,
-        ProximityParamsConfigs proximityConfigs) {
+        ProximityParamsConfigs proximityConfigs,
+        RegionOfInterest roiConfigs,
+        RangingMode rangingMode,
+        TimingBudget timingBudget) implements DistanceSensorConfiguration{
 
-        public DistanceSensorIOCANrangeConfiguration(
+        public DistanceSensorIOConfiguration(
             Optional<String> name, 
             CanDeviceId id,
+            CANrange sensor,
             FovParamsConfigs fovConfigs,
             ProximityParamsConfigs proximityConfigs) 
         {
             this(
                 name.orElse("id " + id.getDeviceNumber()), 
                 id, 
-                new CANrange(id.getDeviceNumber(), id.getBus()), 
-                fovConfigs, 
-                proximityConfigs);
+                new CANrange(id.getDeviceNumber(), id.getBus()),
+                fovConfigs,
+                proximityConfigs,
+                new RegionOfInterest(0, 0, 0, 0),
+                RangingMode.SHORT,
+                TimingBudget.TIMING_BUDGET_20MS);
         }
-
     }
-
     private final String name;
 
     @Getter
-    private final DistanceSensorIOCANrangeConfiguration configuration;
+    private final DistanceSensorIOConfiguration configuration;
 
     private final CANrange distanceSensor;
 
@@ -69,12 +77,12 @@ public class DistanceSensorIOCANrange implements DistanceSensorIO {
      *
      * @param builder The instance used to build the DistanceSensorIOCANrange object.
      */
-    public DistanceSensorIOCANrange(DistanceSensorIOCANrangeConfiguration config)
+    public DistanceSensorIOCANrange(DistanceSensorIOConfiguration config)
     {
         configuration = config;
         name = config.name();
 
-        distanceSensor = config.CANRange();
+        distanceSensor = config.sensor();
         CANrangeConfiguration configuration = new CANrangeConfiguration();
         configuration.FovParams = config.fovConfigs();
         configuration.ProximityParams = config.proximityConfigs();
@@ -185,15 +193,4 @@ public class DistanceSensorIOCANrange implements DistanceSensorIO {
         distanceSensor.getConfigurator().apply(config);
     }
 
-    @Override
-    public DistanceSensorIOLaserCANConfiguration getLaserCANConfiguration() 
-    {
-        return null;
-    }
-
-    @Override
-    public DistanceSensorIOCANrangeConfiguration getCANrangeConfiguration() 
-    {
-        return configuration;
-    }
 }

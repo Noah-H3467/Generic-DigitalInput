@@ -21,8 +21,6 @@ import edu.wpi.first.wpilibj.Alert.AlertType;
 import static edu.wpi.first.units.Units.*;
 
 import frc.robot.Constants;
-import frc.robot.GenericHardware.GenericDistanceSensor.DistanceSensorIOCANrange.DistanceSensorIOCANrangeConfiguration;
-import frc.robot.GenericHardware.GenericDistanceSensor.DistanceSensorIOLaserCAN.DistanceSensorIOLaserCANConfiguration;
 import frc.robot.util.drivers.CanDeviceId;
 import lombok.Getter;
 
@@ -31,16 +29,16 @@ import lombok.Getter;
  * integrates with Thrifty's hardware and provides methods for controlling the DistanceSensor.
  */
 public class DistanceSensorIOLaserCAN implements DistanceSensorIO {
-    public record DistanceSensorIOLaserCANConfiguration(
+    public record DistanceSensorIOConfiguration(
         String name, 
         CanDeviceId id,
         FovParamsConfigs fovConfigs,
         ProximityParamsConfigs proximityConfigs,
         RegionOfInterest roiConfigs,
         RangingMode rangingMode,
-        TimingBudget timingBudget) {
+        TimingBudget timingBudget) implements DistanceSensorConfiguration{
 
-        public DistanceSensorIOLaserCANConfiguration(
+        public DistanceSensorIOConfiguration(
             Optional<String> name, 
             CanDeviceId id,
             RegionOfInterest roiConfigs,
@@ -61,7 +59,8 @@ public class DistanceSensorIOLaserCAN implements DistanceSensorIO {
     @Getter
     private final String name;
 
-    private final DistanceSensorIOLaserCANConfiguration configuration;
+    @Getter
+    private final DistanceSensorConfiguration configuration;
 
     private LaserCanInterface distanceSensor = null;
     private int tries = 0;
@@ -80,7 +79,7 @@ public class DistanceSensorIOLaserCAN implements DistanceSensorIO {
      *
      * @param builder The instance used to build the DistanceSensorIOCANrange object.
      */
-    public DistanceSensorIOLaserCAN(DistanceSensorIOLaserCANConfiguration config, boolean isSim)
+    public DistanceSensorIOLaserCAN(DistanceSensorConfiguration config, boolean isSim)
     {
         configuration = config;
         name = config.name();
@@ -90,7 +89,7 @@ public class DistanceSensorIOLaserCAN implements DistanceSensorIO {
     }
 
     /** Gets the LC interface */
-    public LaserCanInterface getLaserCanInterface(DistanceSensorIOLaserCANConfiguration config) {
+    public LaserCanInterface getLaserCanInterface(DistanceSensorConfiguration config) {
         if (distanceSensor != null) {
             return distanceSensor;
         } else {
@@ -101,7 +100,7 @@ public class DistanceSensorIOLaserCAN implements DistanceSensorIO {
             while (!hasConfiged && tries < 5) {
                 try {
                     lc.setRangingMode(config.rangingMode());
-                    lc.setRegionOfInterest(config.fovConfigs());
+                    lc.setRegionOfInterest(config.roiConfigs());
                     lc.setTimingBudget(config.timingBudget());
                     failedConfig.set(false);
                     System.out.println("Succesfully configured " + name);
@@ -213,17 +212,6 @@ public class DistanceSensorIOLaserCAN implements DistanceSensorIO {
                 tries++;
             }
         }
-    }
-
-    @Override
-    public DistanceSensorIOLaserCANConfiguration getLaserCANConfiguration() 
-    {
-        return configuration;
-    }
-
-    @Override
-    public DistanceSensorIOCANrangeConfiguration getCANrangeConfiguration() {
-        return null;
     }
 
 }

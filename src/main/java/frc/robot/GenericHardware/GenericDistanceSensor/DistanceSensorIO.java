@@ -7,8 +7,6 @@ import org.littletonrobotics.junction.AutoLog;
 import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.units.measure.Distance;
 import edu.wpi.first.units.measure.Voltage;
-import frc.robot.GenericHardware.GenericDistanceSensor.DistanceSensorIOCANrange.DistanceSensorIOCANrangeConfiguration;
-import frc.robot.GenericHardware.GenericDistanceSensor.DistanceSensorIOLaserCAN.DistanceSensorIOLaserCANConfiguration;
 
 public interface DistanceSensorIO {
 
@@ -47,8 +45,6 @@ public interface DistanceSensorIO {
 
     public void updateInputs(DistanceSensorIOInputs inputs);
 
-    public DistanceSensorIOCANrangeConfiguration getCANrangeConfiguration();
-
-    public DistanceSensorIOLaserCANConfiguration getLaserCANConfiguration();
+    public DistanceSensorConfiguration getConfiguration();
     
 }
