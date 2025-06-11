@@ -1,10 +1,8 @@
 package frc.robot.GenericHardware.GenericDistanceSensor;
 
-import com.ctre.phoenix6.configs.FovParamsConfigs;
 import com.ctre.phoenix6.configs.ProximityParamsConfigs;
 
 import au.grapplerobotics.interfaces.LaserCanInterface.RangingMode;
-import au.grapplerobotics.interfaces.LaserCanInterface.RegionOfInterest;
 import au.grapplerobotics.interfaces.LaserCanInterface.TimingBudget;
 import frc.robot.util.drivers.CanDeviceId;
 
@@ -16,8 +14,6 @@ public class DistanceSensorIOReplay implements DistanceSensorIO {
     @Override
     public void updateInputs(DistanceSensorIOInputs inputs)
     {}
-
-
 
     @Override
     public DistanceSensorConfiguration getConfiguration()
@@ -37,9 +33,9 @@ public class DistanceSensorIOReplay implements DistanceSensorIO {
             }
 
             @Override
-            public FovParamsConfigs fovConfigs()
+            public RoiFovConfigs roiFovConfigs()
             {
-                return new FovParamsConfigs();
+                return new RoiFovConfigs(0.0, 0.0, 0.0, 0.0);
             }
 
             @Override
@@ -48,17 +44,13 @@ public class DistanceSensorIOReplay implements DistanceSensorIO {
                 return new ProximityParamsConfigs();
             }
 
+            // LaserCAN only
             @Override
-            public RegionOfInterest roiConfigs()
-            {
-                return new RegionOfInterest(0, 0, 0, 0);
-            }
-            @Override
-
             public RangingMode rangingMode()
             {
                 return RangingMode.SHORT;
             }
+
             @Override
             public TimingBudget timingBudget()
             {

@@ -10,6 +10,21 @@ import edu.wpi.first.units.measure.Voltage;
 
 public interface DistanceSensorIO {
 
+    /**
+     * Represents the intrinsic physical and electrical properties of a motor.
+     * 
+     * @param centerX The center of the field of view (FOV) in the X direction, in whatever unit the hardware uses.
+     * @param centerY The center of the field of view (FOV) in the Y direction, in whatever unit the hardware uses.
+     * @param width The width of the field of view (FOV) in the X direction, in whatever unit the hardware uses.
+     * @param length The length of the field of view (FOV) in the Y direction, in whatever unit the hardware uses.
+     */
+    public record RoiFovConfigs(double centerX, double centerY, double width, double length) {
+        public RoiFovConfigs() {
+            this(0.0, 0.0, 0.0, 0.0);
+        }
+    }
+
+
     @AutoLog
     abstract class DistanceSensorIOInputs {
         /** Whether the DistanceSensor is connected. */

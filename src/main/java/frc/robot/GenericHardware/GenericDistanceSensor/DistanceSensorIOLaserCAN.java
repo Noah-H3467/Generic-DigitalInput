@@ -32,25 +32,23 @@ public class DistanceSensorIOLaserCAN implements DistanceSensorIO {
     public record DistanceSensorIOConfiguration(
         String name, 
         CanDeviceId id,
-        FovParamsConfigs fovConfigs,
         ProximityParamsConfigs proximityConfigs,
-        RegionOfInterest roiConfigs,
+        RoiFovConfigs roiFovConfigs,
         RangingMode rangingMode,
         TimingBudget timingBudget) implements DistanceSensorConfiguration{
 
         public DistanceSensorIOConfiguration(
             Optional<String> name, 
             CanDeviceId id,
-            RegionOfInterest roiConfigs,
+            RoiFovConfigs roiFovConfigs,
             RangingMode rangingMode,
             TimingBudget timingBudget) 
         {
             this(
                 name.orElse("id " + id.getDeviceNumber()), 
                 id, 
-                new FovParamsConfigs(),
                 new ProximityParamsConfigs(),
-                roiConfigs, 
+                roiFovConfigs, 
                 rangingMode,
                 timingBudget);
         }
@@ -97,10 +95,15 @@ public class DistanceSensorIOLaserCAN implements DistanceSensorIO {
             lc = (Constants.currentMode == Constants.Mode.SIM)
                 ? new LaserCANSim(name)
                 : new LaserCan(config.id().getDeviceNumber());
+            RegionOfInterest roi = new RegionOfInterest(
+                (int) Math.round(config.roiFovConfigs().centerX()),
+                (int) Math.round(config.roiFovConfigs().centerY()),
+                (int) Math.round(config.roiFovConfigs().width()),
+                (int) Math.round(config.roiFovConfigs().length()));
             while (!hasConfiged && tries < 5) {
                 try {
                     lc.setRangingMode(config.rangingMode());
-                    lc.setRegionOfInterest(config.roiConfigs());
+                    lc.setRegionOfInterest(roi);
                     lc.setTimingBudget(config.timingBudget());
                     failedConfig.set(false);
                     System.out.println("Succesfully configured " + name);

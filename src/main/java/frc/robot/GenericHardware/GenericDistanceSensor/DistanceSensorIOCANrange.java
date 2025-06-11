@@ -5,11 +5,9 @@ import com.ctre.phoenix6.BaseStatusSignal;
 import com.ctre.phoenix6.StatusSignal;
 import com.ctre.phoenix6.configs.ProximityParamsConfigs;
 import com.ctre.phoenix6.configs.CANrangeConfiguration;
-import com.ctre.phoenix6.configs.FovParamsConfigs;
 import com.ctre.phoenix6.hardware.CANrange;
 
 import au.grapplerobotics.interfaces.LaserCanInterface.RangingMode;
-import au.grapplerobotics.interfaces.LaserCanInterface.RegionOfInterest;
 import au.grapplerobotics.interfaces.LaserCanInterface.TimingBudget;
 
 import edu.wpi.first.units.measure.Angle;
@@ -30,9 +28,8 @@ public class DistanceSensorIOCANrange implements DistanceSensorIO {
         String name, 
         CanDeviceId id,
         CANrange sensor,
-        FovParamsConfigs fovConfigs,
+        RoiFovConfigs roiFovConfigs,
         ProximityParamsConfigs proximityConfigs,
-        RegionOfInterest roiConfigs,
         RangingMode rangingMode,
         TimingBudget timingBudget) implements DistanceSensorConfiguration{
 
@@ -40,17 +37,18 @@ public class DistanceSensorIOCANrange implements DistanceSensorIO {
             Optional<String> name, 
             CanDeviceId id,
             CANrange sensor,
-            FovParamsConfigs fovConfigs,
-            ProximityParamsConfigs proximityConfigs) 
+            RoiFovConfigs roiFovConfigs,
+            ProximityParamsConfigs proximityConfigs,
+            RangingMode rangingMode,
+            TimingBudget timingBudget) 
         {
             this(
                 name.orElse("id " + id.getDeviceNumber()), 
                 id, 
-                new CANrange(id.getDeviceNumber(), id.getBus()),
-                fovConfigs,
+                sensor,
+                roiFovConfigs,
                 proximityConfigs,
-                new RegionOfInterest(0, 0, 0, 0),
-                RangingMode.SHORT,
+                rangingMode,
                 TimingBudget.TIMING_BUDGET_20MS);
         }
     }
@@ -84,7 +82,11 @@ public class DistanceSensorIOCANrange implements DistanceSensorIO {
 
         distanceSensor = config.sensor();
         CANrangeConfiguration configuration = new CANrangeConfiguration();
-        configuration.FovParams = config.fovConfigs();
+        configuration.FovParams.FOVCenterX = config.roiFovConfigs().centerX();
+        configuration.FovParams.FOVCenterY = config.roiFovConfigs().centerY();
+        configuration.FovParams.FOVRangeX = config.roiFovConfigs().width();
+        configuration.FovParams.FOVRangeY = config.roiFovConfigs().length();
+
         configuration.ProximityParams = config.proximityConfigs();
         distanceSensor.getConfigurator().apply(configuration);
 
@@ -101,7 +103,7 @@ public class DistanceSensorIOCANrange implements DistanceSensorIO {
         // Set update frequencies for the StatusSignals of interest
         Phoenix6Util.checkErrorAndRetry(
             () -> BaseStatusSignal.setUpdateFrequencyForAll(
-                100,
+                1000/config.timingBudget().asMilliseconds(),
                 distance,
                 distanceStdDev,
                 supplyVoltage,
