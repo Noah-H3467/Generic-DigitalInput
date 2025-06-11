@@ -6,10 +6,12 @@ package frc.robot;
 
 import java.util.Optional;
 
-import frc.robot.genericSubsystems.GenericDigitalInput.DigitalInputIOWPILib;
-import frc.robot.genericSubsystems.GenericDigitalInput.DigitalInputIOWPILib.DigitalInputIOConfiguration;
+import edu.wpi.first.wpilibj2.command.Commands;
+import frc.robot.GenericHardware.GenericDigitalInput.DigitalInputIOWPILib;
+import frc.robot.GenericHardware.GenericDigitalInput.DigitalInputIOWPILib.DigitalInputIOConfiguration;
 import frc.robot.subsystems.ExampleBeamBreak;
-import frc.robot.genericSubsystems.GenericDigitalInput.DigitalInput;
+import frc.robot.subsystems.ExampleStageSubsystem;
+import frc.robot.GenericHardware.GenericDigitalInput.DigitalInput;
 import frc.robot.util.WindupXboxController;
 
 /**
@@ -39,6 +41,9 @@ public class RobotContainer {
     // Option 2: Initialize example beambreak subsystem
     ExampleBeamBreak  m_beamBreakSub = new ExampleBeamBreak("Example_Beam_Break", Ports.BEAM_BREAK_SUB_PORT);
 
+    // Instantiate example stage subsystem with CANrange
+    ExampleStageSubsystem m_exampleStage = new ExampleStageSubsystem();
+
     private final WindupXboxController joystick = new WindupXboxController(0);
 
     /** Constructs the RobotContainer. Initializes all hardware and simulation IO. */
@@ -57,6 +62,12 @@ public class RobotContainer {
         // Option 2: Rumble when right trigger is pressed until the beam break is triggered
         joystick.rightTrigger().and(joystick.leftTrigger().negate()).whileTrue(
             joystick.rumbleUntilCondition(0.5, () -> m_beamBreakSub.isTriggered()));
+
+        // Example stage subsystem command
+        joystick.leftBumper().onTrue(m_exampleStage.setStateCommand(ExampleStageSubsystem.State.ON)
+            .andThen(Commands.waitUntil(() -> m_exampleStage.isTriggered())
+            .andThen(m_exampleStage.setStateCommand(ExampleStageSubsystem.State.OFF))));
+
     }
     
 }

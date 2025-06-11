@@ -1,13 +1,9 @@
-package frc.robot.genericSubsystems.GenericDigitalInput;
+package frc.robot.GenericHardware.GenericDigitalInput;
 
 import java.util.Optional;
 
 import edu.wpi.first.wpilibj.DigitalInput;
-
 import edu.wpi.first.hal.SimDevice;
-
-import edu.wpi.first.wpilibj.Alert;
-import edu.wpi.first.wpilibj.Alert.AlertType;
 
 import frc.robot.Constants;
 

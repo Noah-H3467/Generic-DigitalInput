@@ -1,4 +1,4 @@
-package frc.robot.genericSubsystems.GenericDigitalInput;
+package frc.robot.GenericHardware.GenericDigitalInput;
 
 import org.littletonrobotics.junction.AutoLog;
 
