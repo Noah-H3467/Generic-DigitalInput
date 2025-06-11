@@ -47,7 +47,7 @@ public class DistanceSensor {
     /** Object within configured proximity. */
     public boolean isDetected()
     {
-        return inputs.detected;
+        return inputs.isDetected;
     }
 
     /** Distance from DistanceSensor to the nearest object in the configured view. */
