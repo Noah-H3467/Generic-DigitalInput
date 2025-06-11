@@ -2,7 +2,6 @@ package frc.robot.GenericHardware.GenericDistanceSensor;
 
 import org.littletonrobotics.junction.Logger;
 
-import com.ctre.phoenix6.configs.FovParamsConfigs;
 import com.ctre.phoenix6.configs.ProximityParamsConfigs;
 
 import au.grapplerobotics.ConfigurationFailedException;

@@ -11,7 +11,7 @@ import edu.wpi.first.units.measure.Voltage;
 public interface DistanceSensorIO {
 
     /**
-     * Represents the intrinsic physical and electrical properties of a motor.
+     * Configs for the Region of Interest (ROI) for LaserCAN or Field of View (FOV) for the CANrange.
      * 
      * @param centerX The center of the field of view (FOV) in the X direction, in whatever unit the hardware uses.
      * @param centerY The center of the field of view (FOV) in the Y direction, in whatever unit the hardware uses.
@@ -23,7 +23,6 @@ public interface DistanceSensorIO {
             this(0.0, 0.0, 0.0, 0.0);
         }
     }
-
 
     @AutoLog
     abstract class DistanceSensorIOInputs {

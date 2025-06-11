@@ -36,7 +36,6 @@ public class DistanceSensorIOCANrange implements DistanceSensorIO {
         public DistanceSensorIOConfiguration(
             Optional<String> name, 
             CanDeviceId id,
-            CANrange sensor,
             RoiFovConfigs roiFovConfigs,
             ProximityParamsConfigs proximityConfigs,
             RangingMode rangingMode,
@@ -45,11 +44,11 @@ public class DistanceSensorIOCANrange implements DistanceSensorIO {
             this(
                 name.orElse("id " + id.getDeviceNumber()), 
                 id, 
-                sensor,
+                new CANrange(id.getDeviceNumber()),
                 roiFovConfigs,
                 proximityConfigs,
                 rangingMode,
-                TimingBudget.TIMING_BUDGET_20MS);
+                timingBudget);
         }
     }
     private final String name;
